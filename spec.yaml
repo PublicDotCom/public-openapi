@@ -1,0 +1,3678 @@
+components:
+  schemas:
+    com.hellopublic.userapiauthservice.domain.error.ErrorBody:
+      type: object
+      properties:
+        errorCode:
+          type: string
+        message:
+          type: string
+    com.hellopublic.userapiauthservice.api.personal.CreateAccessTokenRequest:
+      required:
+        - secret
+      type: object
+      properties:
+        validityInMinutes:
+          maximum: 1440
+          minimum: 5
+          type: integer
+          description: Validity of the access token to be issued in minutes. Defaults to 15 minutes.
+          format: int32
+          nullable: true
+        secret:
+          maxLength: 2147483647
+          minLength: 5
+          type: string
+          description: A valid personal secret
+    com.hellopublic.userapiauthservice.api.personal.CreateAccessTokenResponse:
+      required:
+        - accessToken
+      type: object
+      properties:
+        accessToken:
+          type: string
+    com.hellopublic.userapigateway.api.rest.order.ApiCancelReplaceOrderRequest:
+      required:
+        - expiration
+        - orderId
+        - orderType
+        - requestId
+      type: object
+      properties:
+        orderId:
+          type: string
+          description: |-
+            This value identifies the order to be replaced; if reused on the same account, the operation is idempotent.
+            If the order is re-submitted due to a read timeout, do not modify any properties. If the original request
+            succeeded, altering fields will have no effect.
+          format: uuid
+        requestId:
+          type: string
+          description: |-
+            Id of the new order in UUID-format conforming to RFC 4122 (standard 8-4-4-4-12 format, e.g., 0d2abd8d-3625-4c83-a806-98abf35567cc).
+            The new orderId must be globally unique over time.
+          format: uuid
+        orderType:
+          type: string
+          description: The Type of order
+          enum:
+            - MARKET
+            - LIMIT
+            - STOP
+            - STOP_LIMIT
+        expiration:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.OrderExpiration'
+        quantity:
+          type: string
+          description: |-
+            The order quantity. Used when buying/selling whole shares and when selling fractional.
+            Mutually exclusive with `amount`
+        amount:
+          type: string
+          description: |-
+            The order amount.
+            Used when replacing an order for a specific notional value.
+            Mutually exclusive with `quantity`
+        limitPrice:
+          type: string
+          description: The limit price. Used when orderType = LIMIT or orderType = STOP_LIMIT
+        stopPrice:
+          type: string
+          description: The stop price. Used when orderType = STOP or orderType = STOP_LIMIT
+      description: |-
+        Used for replacing orders placed via the UserApiGatewayService or other service
+        Replaces should not be placed in parallel as ordering is not guaranteed for individual HTTP calls
+    com.hellopublic.userapigateway.api.rest.order.OrderExpiration:
+      required:
+        - timeInForce
+      type: object
+      properties:
+        timeInForce:
+          type: string
+          description: The time in for the order
+          enum:
+            - DAY
+            - GTD
+        expirationTime:
+          type: string
+          description: The expiration date. Only used when timeInForce is GTD, cannot be more than 90 days in the future
+          format: date-time
+    com.hellopublic.userapigateway.api.rest.order.ApiOrderResult:
+      type: object
+      properties:
+        orderId:
+          type: string
+          format: uuid
+    com.hellopublic.userapigateway.api.rest.order.GatewayOrderInstrument:
+      required:
+        - symbol
+        - type
+      type: object
+      properties:
+        symbol:
+          type: string
+        type:
+          type: string
+          enum:
+            - EQUITY
+            - OPTION
+            - MULTI_LEG_INSTRUMENT
+            - CRYPTO
+            - ALT
+            - TREASURY
+            - BOND
+            - INDEX
+    com.hellopublic.userapigateway.api.rest.order.GatewayTaxLotMatchingInstruction:
+      required:
+        - quantity
+        - taxLotId
+      type: object
+      properties:
+        taxLotId:
+          type: string
+          description: 'The tax lot id in the format: symbol;tradeDate;price;quantity (e.g., "AAPL;2024-01-15;150.00;10")'
+        quantity:
+          type: string
+          description: The quantity of the equity. Must be greater than 0 and not exceed the quantity of the tax lot.
+      description: |-
+        Tax lot matching instruction for an order.
+
+        Tax lot matching instructions must follow these rules:
+        - There can only be at most 8 tax lot matching instructions per request. If the list of tax lot instructions is present (non-null), it must have at least one and at most eight elements.
+        - Tax lot instructions can only be specified for orders to SELL equity with open/close indicator CLOSE.
+        - The tax lot instructions must be for the same symbol as this order sells.
+        - Tax lot instructions can only be specified for MARKET orders or good for the day LIMIT orders.
+        - The total quantity of the tax lot instructions must sum to the quantity of this order.
+        - Tax lot instructions can only be specified if the tax lot information has been updated today.
+
+        There is no guarantee that the tax lot instructions are applied exactly as specified.
+    com.hellopublic.userapigateway.api.rest.preflight.PreflightSingleLegRequest:
+      required:
+        - expiration
+        - instrument
+        - orderSide
+        - orderType
+      type: object
+      properties:
+        instrument:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayOrderInstrument'
+        orderSide:
+          type: string
+          description: The Order Side BUY/SELL. For Options also include the openCloseIndicator
+          enum:
+            - BUY
+            - SELL
+        orderType:
+          type: string
+          description: The Type of order
+          enum:
+            - MARKET
+            - LIMIT
+            - STOP
+            - STOP_LIMIT
+        expiration:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.OrderExpiration'
+        quantity:
+          type: string
+          description: |-
+            The order quantity. Used when buying/selling whole shares and when selling fractional.
+            Mutually exclusive with `amount`
+        amount:
+          type: string
+          description: The order amount. Used when buying/selling shares for a specific notional value
+        limitPrice:
+          type: string
+          description: The limit price. Used when orderType = LIMIT or orderType = STOP_LIMIT
+        stopPrice:
+          type: string
+          description: The stop price. Used when orderType = STOP or orderType = STOP_LIMIT
+        equityMarketSession:
+          type: string
+          description: |-
+            The market session in which the order may execute.
+            Extended hours are available only for DAY time-in-force equity orders and can execute any time from 4:00 a.m. ET through 8:00 p.m. ET.
+            If omitted, the session defaults to CORE.
+          enum:
+            - CORE
+            - EXTENDED
+            - TWENTY_FOUR_HOURS
+        openCloseIndicator:
+          type: string
+          description: Used for options to indicate if this is BUY to OPEN/CLOSE. Also used for shorting equities to indicate SELL-to-OPEN (opening a short position) or BUY-to-CLOSE (closing a short position).
+          enum:
+            - OPEN
+            - CLOSE
+        validateOrder:
+          type: boolean
+          description: If true, the order will be validated against current account state. Defaults to true.
+        useMargin:
+          type: boolean
+          description: |-
+            If false, the order will be evaluated using cash-only buying power instead of margin buying power when available.
+            If true or omitted, margin will be applied when allowed by the account configuration.
+            This parameter only has an effect when validateOrder is true and the account has margin enabled.
+        taxLotMatchingInstructions:
+          type: array
+          description: Tax lot matching instructions for this order. See the GatewayTaxLotMatchingInstruction type for detailed rules and constraints.
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayTaxLotMatchingInstruction'
+    com.hellopublic.userapigateway.api.rest.order.GatewayShortSelling:
+      required:
+        - availability
+        - uptickRule
+      type: object
+      properties:
+        availability:
+          type: string
+          description: the availability of short-selling for this instrument.
+          enum:
+            - NOT_SHORTABLE
+            - EASY_TO_BORROW
+            - HARD_TO_BORROW
+        hardToBorrowPercentageRate:
+          type: string
+          description: the hard to borrow rate as a percentage value.
+        initialMarginRequirementPercentage:
+          type: string
+          description: the initial margin requirement as a percentage value.
+        maintenanceMarginRequirementPercentage:
+          type: string
+          description: the maintenance margin requirement as a percentage value.
+        maxQuantityForLocate:
+          type: integer
+          description: the maximum quantity that we can request to locate for all hard-to-borrow stocks. The actual number we can locate can be lower for concrete stocks.
+          format: int32
+        uptickRule:
+          type: string
+          description: the Uptick Rule is triggered for equities when the price today or yesterday has dropped at least 10 percent since previous days' closing price.
+          enum:
+            - TRIGGERED
+            - NOT_TRIGGERED
+      description: Short-selling information for the given instrument.
+    com.hellopublic.userapigateway.api.rest.preflight.GatewayMarginImpact:
+      type: object
+      properties:
+        marginUsageImpact:
+          type: string
+        initialMarginRequirement:
+          type: string
+    com.hellopublic.userapigateway.api.rest.preflight.GatewayMarginRequirement:
+      type: object
+      properties:
+        longMaintenanceRequirement:
+          type: string
+        longInitialRequirement:
+          type: string
+    com.hellopublic.userapigateway.api.rest.preflight.GatewayOptionDetails:
+      required:
+        - baseSymbol
+        - optionExpireDate
+        - strikePrice
+        - type
+      type: object
+      properties:
+        baseSymbol:
+          type: string
+        type:
+          type: string
+          enum:
+            - CALL
+            - PUT
+        strikePrice:
+          type: string
+        optionExpireDate:
+          type: string
+          format: date
+    com.hellopublic.userapigateway.api.rest.preflight.GatewayOptionRebate:
+      type: object
+      properties:
+        estimatedOptionRebate:
+          type: string
+        optionRebatePercent:
+          type: integer
+          format: int32
+        perContractRebate:
+          type: string
+    com.hellopublic.userapigateway.api.rest.preflight.GatewayPriceIncrement:
+      type: object
+      properties:
+        incrementBelow3:
+          type: string
+        incrementAbove3:
+          type: string
+        currentIncrement:
+          type: string
+      description: Price increment information for option orders.
+    com.hellopublic.userapigateway.api.rest.preflight.GatewayRegulatoryFees:
+      type: object
+      properties:
+        secFee:
+          type: string
+        tafFee:
+          type: string
+        orfFee:
+          type: string
+        exchangeFee:
+          type: string
+        occFee:
+          type: string
+        catFee:
+          type: string
+      description: |-
+        # GatewayRegulatoryFees
+        Represents various regulatory fees associated with trading orders.
+        <br/>
+        ## Fields
+        - **secFee** - The SEC charges a regulatory fee for sell orders that execute. The fee is based on the dollar amount of the order.
+        - **tafFee** - The Trading Activity Fee is a FINRA fee. The fee is based on the order quantity.
+        - **orfFee** - The Options Regulatory Fee (ORF). This is the combined exchange fee rate for all exchanges. Changes monthly.
+        - **exchangeFee** - The exchange charges a fee for executing orders for index options.
+        - **occFee** - The Options Clearing Corporation Fee (OCC)
+        - **catFee** - The Consolidated Audit Trail Fee (CAT)
+    com.hellopublic.userapigateway.api.rest.preflight.PreflightSingleLegResponse:
+      required:
+        - instrument
+        - orderValue
+      type: object
+      properties:
+        instrument:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayOrderInstrument'
+        cusip:
+          type: string
+        rootSymbol:
+          type: string
+        rootOptionSymbol:
+          type: string
+        estimatedCommission:
+          type: string
+        regulatoryFees:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.preflight.GatewayRegulatoryFees'
+        estimatedIndexOptionFee:
+          type: string
+        estimatedExecutionFee:
+          type: string
+        orderValue:
+          type: string
+        estimatedQuantity:
+          type: string
+        estimatedCost:
+          type: string
+        buyingPowerRequirement:
+          type: string
+        estimatedProceeds:
+          type: string
+        optionDetails:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.preflight.GatewayOptionDetails'
+        estimatedOrderRebate:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.preflight.GatewayOptionRebate'
+        marginRequirement:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.preflight.GatewayMarginRequirement'
+        marginImpact:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.preflight.GatewayMarginImpact'
+        shortSelling:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayShortSelling'
+        priceIncrement:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.preflight.GatewayPriceIncrement'
+      description: |-
+        # PreflightSingleLegResponse
+        Response containing estimated costs, fees, and other information needed before placing a single-leg order.
+
+        ## Fields
+
+        ### Instrument Information
+        - **symbol** - The trading symbol for the instrument
+        - **cusip** - The CUSIP identifier for the instrument (if applicable)
+        - **securityType** - The type of security (EQUITY, OPTION, BOND, etc.)
+        - **rootSymbol** - The root symbol for options and other derivatives
+        - **rootOptionSymbol** - The root option symbol for option chains
+
+        ### Cost and Fee Information
+        - **estimatedCommission** - The estimated commission amount that will be charged if the order executes
+        - **regulatoryFees** - The estimated gateway regulatory fees breakdown including SEC, TAF, ORF, OCC, CAT fees
+        - **estimatedIndexOptionFee** - The estimated gateway fee when buying index options
+        - **estimatedExecutionFee** - The estimated gateway fee when using specific venues for buying stocks
+        - **estimatedCost** - The total estimated cost including all fees and commissions
+        - **buyingPowerRequirement** - The buying power required for this order
+
+        ### Order Details
+        - **orderValue** - The estimated order value, excluding fees and commission
+        - **estimatedQuantity** - For quantity orders this is exact, for amount-based orders this is an estimate
+        - **estimatedProceeds** - The estimated proceeds from the order (for sell orders)
+
+        ### Option-Specific Information
+        - **optionDetails** - Consolidated option-specific details including strike price, expiration, rebates, and fees
+        - **priceIncrement** - Price increment information for option orders
+
+        ### Shorting-Specific Information
+        - **shortSelling** - Information about short selling rules and fees
+    com.hellopublic.userapigateway.api.rest.order.GatewayLegInstrument:
+      required:
+        - symbol
+        - type
+      type: object
+      properties:
+        symbol:
+          type: string
+        type:
+          type: string
+          enum:
+            - EQUITY
+            - OPTION
+    com.hellopublic.userapigateway.api.rest.order.GatewayOrderLeg:
+      required:
+        - instrument
+        - side
+      type: object
+      properties:
+        instrument:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayLegInstrument'
+        side:
+          type: string
+          enum:
+            - BUY
+            - SELL
+        openCloseIndicator:
+          type: string
+          description: required when instrument.type = OPTION, used to determine if the leg is buy-to-open or buy-to-close
+          enum:
+            - OPEN
+            - CLOSE
+        ratioQuantity:
+          type: integer
+          description: The ratio between legs. Equity legs will typically be 100 shares, and option legs 1 contract
+          format: int32
+      description: Option or equity leg. There can never be more than 1 equity leg.
+    com.hellopublic.userapigateway.api.rest.preflight.PreflightMultiLegRequest:
+      required:
+        - expiration
+        - legs
+        - limitPrice
+        - orderType
+        - quantity
+      type: object
+      properties:
+        orderType:
+          type: string
+          enum:
+            - MARKET
+            - LIMIT
+            - STOP
+            - STOP_LIMIT
+        expiration:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.OrderExpiration'
+        quantity:
+          type: string
+        limitPrice:
+          type: string
+        legs:
+          minItems: 1
+          type: array
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayOrderLeg'
+        validateOrder:
+          type: boolean
+        useMargin:
+          type: boolean
+      description: |-
+        # PreflightMultiLegRequest
+        Request for preflight calculations on multi-leg orders.
+
+        ## Fields
+        - **orderType** - The type of order (only LIMIT orders are allowed for multi-leg)
+        - **expiration** - The order expiration configuration
+        - **quantity** - The order quantity (number of strategies)
+        - **limitPrice** - The limit price for the order (required for LIMIT orders)
+        - **legs** - List of order legs (2-6 legs allowed, at most 1 equity leg)
+        - **equityMarketSession** - The market session for equity legs
+        - **validateOrder** - If true, the order will be validated against current account state. Defaults to true.
+        - **useMargin** - If false, the order will be evaluated using cash-only buying power instead of margin buying power when available. This parameter only has an effect when validateOrder is true and the account has margin enabled. Defaults to true.
+    com.hellopublic.userapigateway.api.rest.preflight.PreflightLegResponse:
+      required:
+        - instrument
+        - ratioQuantity
+        - side
+      type: object
+      properties:
+        instrument:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayOrderInstrument'
+        side:
+          type: string
+          enum:
+            - BUY
+            - SELL
+        openCloseIndicator:
+          type: string
+          enum:
+            - OPEN
+            - CLOSE
+        ratioQuantity:
+          type: integer
+          format: int32
+        optionDetails:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.preflight.GatewayOptionDetails'
+      description: |-
+        # PreflightLegResponse
+        Response containing information about an individual leg in a multi-leg order preflight calculation.
+
+        ## Fields
+
+        ### Instrument Information
+        - **instrument** - The trading instrument for this leg
+        - **side** - The order side (BUY/SELL) for this leg
+        - **openCloseIndicator** - Position effect for option legs (BUY_TO_OPEN, BUY_TO_CLOSE, etc.)
+        - **ratioQuantity** - The ratio quantity for this leg in the strategy
+
+        ### Cost and Fee Information
+        - **estimatedCommission** - The estimated commission for this specific leg
+        - **estimatedCost** - The estimated cost for this leg including fees
+        - **estimatedProceeds** - The estimated proceeds for this leg (for sell legs)
+
+        ### Option-Specific Information
+        - **optionDetails** - Option-specific details like strike price, expiration, fees, and rebates
+    com.hellopublic.userapigateway.api.rest.preflight.PreflightMultiLegResponse:
+      required:
+        - baseSymbol
+        - legs
+        - orderValue
+      type: object
+      properties:
+        baseSymbol:
+          type: string
+        strategyName:
+          type: string
+        legs:
+          type: array
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.preflight.PreflightLegResponse'
+        estimatedCommission:
+          type: string
+        regulatoryFees:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.preflight.GatewayRegulatoryFees'
+        estimatedIndexOptionFee:
+          type: string
+        orderValue:
+          type: string
+        estimatedQuantity:
+          type: string
+        estimatedCost:
+          type: string
+        buyingPowerRequirement:
+          type: string
+        estimatedProceeds:
+          type: string
+        marginRequirement:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.preflight.GatewayMarginRequirement'
+        marginImpact:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.preflight.GatewayMarginImpact'
+        priceIncrement:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.preflight.GatewayPriceIncrement'
+      description: |-
+        # PreflightMultiLegResponse
+        Response containing estimated costs, fees, and other information needed before placing a multi-leg order.
+
+        ## Fields
+
+        ### Strategy Information
+        - **baseSymbol** - The base symbol for the multi-leg strategy (e.g., "TSLA" for Tesla options)
+        - **strategyName** - The name of the strategy (e.g., "Call Spread", "Iron Condor")
+        - **legs** - List of individual leg details for the strategy
+
+        ### Cost and Fee Information
+        - **estimatedCommission** - The estimated commission amount that will be charged if the order executes
+        - **regulatoryFees** - Gateway regulatory fees breakdown including SEC, TAF, ORF, OCC, CAT fees
+        - **estimatedIndexOptionFee** - Estimated index option fees (if applicable)
+        - **estimatedCost** - The total estimated cost including all fees and commissions
+        - **buyingPowerRequirement** - The buying power required for this multi-leg order
+
+        ### Order Details
+        - **orderValue** - The estimated order value, excluding fees and commission
+        - **estimatedQuantity** - The number of strategies that will be executed
+        - **estimatedProceeds** - The estimated proceeds from the order (for credit spreads)
+
+        ### Option-Specific Information
+        - **marginRequirement** - Margin requirements for the multi-leg strategy
+        - **marginImpact** - Impact on account margin usage
+        - **priceIncrement** - Price increment information for option orders
+    com.hellopublic.userapigateway.api.rest.order.ApiOrderRequest:
+      required:
+        - expiration
+        - instrument
+        - orderId
+        - orderSide
+        - orderType
+      type: object
+      properties:
+        orderId:
+          type: string
+          description: |-
+            The OrderId, a UUID conforming to RFC 4122 (standard 8-4-4-4-12 format, e.g., 0d2abd8d-3625-4c83-a806-98abf35567cc),
+            must be globally unique over time.
+            This value serves as the deduplication key; if reused on the same account, the operation is idempotent.
+            If the order is re-submitted due to a read timeout, do not modify any properties. If the original request
+            succeeded, altering fields will have no effect.
+          format: uuid
+        instrument:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayOrderInstrument'
+        orderSide:
+          type: string
+          description: The Order Side BUY/SELL. For Options also include the openCloseIndicator
+          enum:
+            - BUY
+            - SELL
+        orderType:
+          type: string
+          description: The Type of order
+          enum:
+            - MARKET
+            - LIMIT
+            - STOP
+            - STOP_LIMIT
+        expiration:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.OrderExpiration'
+        quantity:
+          type: string
+          description: |-
+            The order quantity. Used when buying/selling whole shares and when selling fractional.
+            Mutually exclusive with `amount`
+        amount:
+          type: string
+          description: The order amount. Used when buying/selling shares for a specific notional value
+        limitPrice:
+          type: string
+          description: The limit price. Used when orderType = LIMIT or orderType = STOP_LIMIT
+        stopPrice:
+          type: string
+          description: The stop price. Used when orderType = STOP or orderType = STOP_LIMIT
+        equityMarketSession:
+          type: string
+          description: |-
+            The market session in which the order may execute.
+            Extended hours are available only for DAY time-in-force equity orders and can execute any time from 4:00 a.m. ET through 8:00 p.m. ET.
+            If omitted, the session defaults to CORE.
+          enum:
+            - CORE
+            - EXTENDED
+            - TWENTY_FOUR_HOURS
+        openCloseIndicator:
+          type: string
+          description: |-
+            Used for options to indicate if this is BUY to OPEN/CLOSE. Also used for shorting equities to indicate SELL-to-OPEN (opening a short position) or BUY-to-CLOSE (closing a short position).
+            If null the default will be OPEN for buy orders and CLOSE for sell orders.
+          enum:
+            - OPEN
+            - CLOSE
+        useMargin:
+          type: boolean
+          description: |-
+            If false, the order will be evaluated using cash-only buying power instead of margin buying power when available.
+            If true or omitted, margin will be applied when allowed by the account configuration.
+        taxLotMatchingInstructions:
+          type: array
+          description: Tax lot matching instructions for this order. See the GatewayTaxLotMatchingInstruction type for detailed rules and constraints.
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayTaxLotMatchingInstruction'
+      description: Used for orders placed via the UserApiGatewayService or other service where the order is just a single request and the orderId is generated by the client
+    com.hellopublic.userapigateway.api.rest.order.ApiMultilegOrderRequest:
+      required:
+        - expiration
+        - legs
+        - limitPrice
+        - orderId
+        - quantity
+        - type
+      type: object
+      properties:
+        orderId:
+          type: string
+          description: The OrderId, a UUID conforming to RFC 4122 (8-4-4-4-12 format, e.g., 0d2abd8d-3625-4c83-a806-98abf35567cc), globally unique over time. Serves as the deduplication key; if reused on the same account, the operation is idempotent.
+          format: uuid
+        quantity:
+          type: integer
+          description: The order quantity
+          format: int32
+        type:
+          type: string
+          description: The order type. Only LIMIT order are allowed
+          enum:
+            - MARKET
+            - LIMIT
+            - STOP
+            - STOP_LIMIT
+        limitPrice:
+          type: string
+          description: The limit price for the order. For debit spreads the limit price must be positive, for create spreads the limit price is negative
+        expiration:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.OrderExpiration'
+        legs:
+          minItems: 1
+          type: array
+          description: From 2-6 legs. There can be at most 1 equity leg
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayOrderLeg'
+        useMargin:
+          type: boolean
+          description: Optional field to indicate whether to use margin buying power. Defaults to true if not specified.
+      description: Used for multileg orders placed via the UserApiGatewayService or other service where the order is just a single request and the orderId is generated by the client
+    com.matadorapp.shared.customerordergateway.dto.OrderLeg:
+      required:
+        - ratioQuantity
+        - side
+        - symbol
+      type: object
+      properties:
+        symbol:
+          minLength: 1
+          type: string
+          description: Symbol for the leg.
+        side:
+          type: string
+          description: Side for the leg.
+          enum:
+            - BUY
+            - SELL
+        openCloseIndicator:
+          type: string
+          description: Position effect for the leg. Will be null for equity leg.
+          enum:
+            - OPEN
+            - CLOSE
+        ratioQuantity:
+          type: integer
+          description: Ratio quantity for the leg.
+          format: int32
+      description: Leg definition for the strategy.
+      nullable: true
+    com.matadorapp.shared.customerordergateway.dto.StrategyQuoteRequest:
+      required:
+        - baseSymbol
+        - optionLegs
+      type: object
+      properties:
+        baseSymbol:
+          minLength: 1
+          type: string
+          description: Base symbol for the strategy
+        optionLegs:
+          type: array
+          description: Option legs for the order.
+          items:
+            $ref: '#/components/schemas/com.matadorapp.shared.customerordergateway.dto.OrderLeg'
+        equityLeg:
+          $ref: '#/components/schemas/com.matadorapp.shared.customerordergateway.dto.OrderLeg'
+      description: Request quote for a multi leg strategy.
+    com.hellopublic.trading.core.quote.BondQuoteDetail:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/com.hellopublic.trading.core.quote.QuoteSpecificDetail'
+        - type: object
+          properties:
+            askMinSize:
+              type: string
+            bidMinSize:
+              type: string
+            askMarkup:
+              type: string
+            bidMarkup:
+              type: string
+    com.hellopublic.trading.core.quote.QuoteSpecificDetail:
+      required:
+        - type
+      type: object
+      properties:
+        type:
+          type: string
+      discriminator:
+        propertyName: type
+    com.hellopublic.trading.core.quote.SignedQuote:
+      required:
+        - signature
+        - symbol
+        - timestamp
+      type: object
+      properties:
+        symbol:
+          minLength: 1
+          type: string
+          description: The symbol identifying the instrument.
+        last:
+          type: string
+          description: The last trade for this instrument. May be <code>null</code> if the quote is for a symbol on the IPO date and the order type is LIMIT.
+        bid:
+          type: string
+          description: The last bid price for this instrument.
+        bidSize:
+          type: string
+          description: The number of units available at the given bid price.
+        ask:
+          type: string
+          description: The last ask price for this instrument.
+        askSize:
+          type: string
+          description: The number of units available at the given ask price.
+        timestamp:
+          type: string
+          description: The timestamp were the server returned this message. This is not the timestamp of the bid/ask or the last trade
+          format: date-time
+        signature:
+          minLength: 1
+          type: string
+          description: A hash of the properties, to make sure the app does not change any of the data when posting back the quote during order creation.
+        collarPercentage:
+          type: string
+          description: the collar percentage, used to calculate the markup/markdown for bid/ask which the app should use when placing extended hours limit orders
+        buyCollar:
+          type: string
+          description: Price used to buy with collar. This is collarPercentage higher than the current bid, to ensure that the order will execute unless the market moves more than collarPercentage up
+        sellCollar:
+          type: string
+          description: Price used to sell with collar. This is collarPercentage lower than the current ask, to ensure that the order will execute unless the market moves more than collarPercentage down
+        openInterest:
+          type: integer
+          description: |-
+            The total number of options contracts that are not closed or delivered on a particular day.
+             This will be null for non option quotes
+          format: int32
+        bidCollar:
+          type: string
+          deprecated: true
+        askCollar:
+          type: string
+          deprecated: true
+        detail:
+          description: Additional quote specific details, for example Bonds have additional quote specific properties such as markup
+          oneOf:
+            - $ref: '#/components/schemas/com.hellopublic.trading.core.quote.BondQuoteDetail'
+        tradingHalted:
+          type: boolean
+          description: Indicates if trading is currently halted on the symbol
+        uptickRule:
+          type: string
+          description: |-
+            The Uptick Rule is triggered for equities when the price today or yesterday has dropped at least 10 percent since previous days' closing price.
+            The property is null when the rule is not applicable (for other security types than equity) or when it cannot be determined.
+          enum:
+            - TRIGGERED
+            - NOT_TRIGGERED
+      description: The original version did not allow null values for bid/ask data. This was relaxed later to allow equity to use super-quotes
+    com.matadorapp.shared.customerordergateway.dto.StrategyLegDto:
+      required:
+        - instrument
+        - ratioQuantity
+        - side
+      type: object
+      properties:
+        instrument:
+          $ref: '#/components/schemas/com.matadorapp.shared.customerordergateway.dto.StrategyLegInstrumentDto'
+        side:
+          type: string
+          description: Order side for the leg
+          enum:
+            - BUY
+            - SELL
+        openCloseIndicator:
+          type: string
+          description: Open close indicator for the leg. Null for equity leg
+          enum:
+            - OPEN
+            - CLOSE
+        ratioQuantity:
+          type: integer
+          description: Ratio quantity for the leg
+          format: int32
+        quote:
+          $ref: '#/components/schemas/com.hellopublic.trading.core.quote.SignedQuote'
+    com.matadorapp.shared.customerordergateway.dto.StrategyLegInstrumentDto:
+      required:
+        - symbol
+      type: object
+      properties:
+        symbol:
+          type: string
+          description: Instrument symbol.
+        baseSymbol:
+          type: string
+          description: Base symbol. Only available for option leg.
+        type:
+          type: string
+          description: Type of option. Only available for option leg.
+          enum:
+            - CALL
+            - PUT
+        strikePrice:
+          type: string
+          description: Option strike price. Only available for option leg.
+        expirationDate:
+          type: string
+          description: Option expiration date. Only available for option leg.
+          format: date
+      description: Defines the leg instrument.
+    com.matadorapp.shared.customerordergateway.dto.StrategyQuoteDto:
+      required:
+        - ask
+        - bid
+        - price
+        - strategyLegs
+        - strategyName
+      type: object
+      properties:
+        debitCredit:
+          type: string
+          description: |-
+            Flag to determine if the strategy is a debit or credit strategy. If the price is close to $0.00 or the spread
+             is across $0.00, e.g. bid = -$0.10 and ask = $0.20 then UNKNOWN is returned.
+          enum:
+            - DEBIT
+            - CREDIT
+            - UNDECIDED
+        strategyLegs:
+          type: array
+          description: Legs and their quotes.
+          items:
+            $ref: '#/components/schemas/com.matadorapp.shared.customerordergateway.dto.StrategyLegDto'
+        equityQuote:
+          $ref: '#/components/schemas/com.matadorapp.shared.customerordergateway.dto.StrategyLegDto'
+        price:
+          type: string
+          description: Strategy price.
+        bid:
+          type: string
+          description: Strategy bid (same value as price).
+        ask:
+          type: string
+          description: Strategy ask.
+        mark:
+          type: string
+          description: Mark price, average of bid/ask
+        strategyName:
+          type: string
+          description: Name of the strategy.
+        expirationDate:
+          type: string
+          description: Strategy expiration date. Null if legs expire on different dates or equity leg is part of strategy.
+          format: date
+      description: Quote for multileg strategy.
+    com.hellopublic.userapigateway.api.rest.marketdata.quote.GatewayQuoteRequest:
+      required:
+        - instruments
+      type: object
+      properties:
+        instruments:
+          type: array
+          description: List of instruments to query quotes.
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayOrderInstrument'
+    com.hellopublic.userapigateway.api.rest.marketdata.quote.BondDetails:
+      type: object
+      properties:
+        askMinSize:
+          type: string
+          description: Minimum trade size for asks in par value
+        bidMinSize:
+          type: string
+          description: Minimum trade size for bids in par value
+        askMarkup:
+          type: string
+          description: Ask markup percentage
+        bidMarkup:
+          type: string
+          description: Bid markup percentage
+        suggestedBuyPrice:
+          type: string
+          description: Suggested buy price for this bond
+        suggestedSellPrice:
+          type: string
+          description: Suggested sell price for this bond
+        minBuyAmount:
+          type: string
+          description: Minimum buy amount in dollars
+        minBuyIncrementAmount:
+          type: string
+          description: Minimum buy increment amount in dollars
+      description: Bond-specific details for a quote.
+    com.hellopublic.userapigateway.api.rest.marketdata.quote.GatewayQuote:
+      required:
+        - instrument
+        - outcome
+      type: object
+      properties:
+        instrument:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayOrderInstrument'
+        outcome:
+          type: string
+          description: The outcome status of the quote request.
+          enum:
+            - SUCCESS
+            - UNKNOWN
+        last:
+          type: string
+          description: The last traded price of the instrument. Can be null if no trades have occurred.
+        lastTimestamp:
+          type: string
+          description: Timestamp of when the last trade occurred. Can be null if no trades have occurred.
+          format: date-time
+        bid:
+          type: string
+          description: The current bid price (sell-side price) in the market. Can be null if no bid exists.
+        bidSize:
+          type: integer
+          description: Number of shares, contracts, or units available at the given bid price.
+          format: int32
+        bidTimestamp:
+          type: string
+          description: Timestamp of when the bid price was last updated. Can be null if no bid exists.
+          format: date-time
+        ask:
+          type: string
+          description: The current ask price (buy-side price) in the market. Can be null if no ask exists.
+        askSize:
+          type: integer
+          description: Number of shares, contracts, or units available at the given ask price.
+          format: int32
+        askTimestamp:
+          type: string
+          description: Timestamp of when the ask price was last updated. Can be null if no ask exists.
+          format: date-time
+        volume:
+          type: integer
+          description: The total volume traded on the date of the last trade.
+          format: int64
+        openInterest:
+          type: integer
+          description: The total number of options contracts that are not closed or delivered on a particular day.
+          format: int64
+        previousClose:
+          type: string
+          description: The previous day's close price from the last trading session.
+        oneDayChange:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.marketdata.quote.OneDayChange'
+        optionDetails:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.marketdata.quote.OptionDetails'
+        bondDetails:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.marketdata.quote.BondDetails'
+    com.hellopublic.userapigateway.api.rest.marketdata.quote.GatewayQuoteResponse:
+      type: object
+      properties:
+        quotes:
+          type: array
+          description: List of quotes
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.marketdata.quote.GatewayQuote'
+    com.hellopublic.userapigateway.api.rest.marketdata.quote.OneDayChange:
+      type: object
+      properties:
+        change:
+          type: string
+          description: The one-day price change in dollars
+        percentChange:
+          type: string
+          description: The one-day price change as a percentage
+      description: |-
+        Represents the one-day price change data for a quote.
+
+        The change values are provided by the data source (e.g., Xignite) and may differ from simple subtraction
+        of current price minus previous close due to corporate actions, stock splits, or other adjustments.
+    com.hellopublic.userapigateway.api.rest.marketdata.quote.OptionDetails:
+      required:
+        - strikePrice
+      type: object
+      properties:
+        greeks:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.options.OptionGreeks'
+        strikePrice:
+          type: string
+          description: The strike price for the option contract.
+        midPrice:
+          type: string
+          description: |-
+            The mid price (average of bid and ask) for the option contract.
+            Null if bid/ask data is not available.
+          nullable: true
+      description: Option-specific details including Greeks, strike price, and mid price.
+    com.hellopublic.userapigateway.api.rest.options.OptionGreeks:
+      type: object
+      properties:
+        delta:
+          type: string
+          description: |-
+            Delta is the theoretical estimate of how much an option's value may change given a $1 move UP or DOWN in the underlying security.
+            The Delta values range from -1 to +1, with 0 representing an option where the premium barely moves relative to price changes in the underlying stock.
+        gamma:
+          type: string
+          description: |-
+            Gamma represents the rate of change between an option's Delta and the underlying asset's price.
+            Higher Gamma values indicate that the Delta could change dramatically with even very small price changes in the underlying stock or fund.
+        theta:
+          type: string
+          description: |-
+            Theta represents the rate of change between the option price and time, or time sensitivity—sometimes known as an option's time decay.
+            Theta indicates the amount an option's price would decrease as the time to expiration decreases, all else equal.
+        vega:
+          type: string
+          description: Vega measures the amount of increase or decrease in an option premium based on a 1% change in implied volatility.
+        rho:
+          type: string
+          description: Rho represents the rate of change between an option's value and a 1% change in the interest rate. This measures sensitivity to the interest rate.
+        impliedVolatility:
+          type: string
+          description: Implied volatility (IV) is a theoretical forecast of how volatile an underlying stock is expected to be in the future.
+      nullable: true
+    com.hellopublic.userapigateway.api.rest.marketdata.quote.GatewayOptionExpirationsRequest:
+      required:
+        - instrument
+      type: object
+      properties:
+        instrument:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayOrderInstrument'
+    com.hellopublic.userapigateway.api.rest.marketdata.quote.GatewayOptionExpirationsResponse:
+      required:
+        - baseSymbol
+        - expirations
+      type: object
+      properties:
+        baseSymbol:
+          type: string
+          description: The base symbol for which the option expirations belong.
+        expirations:
+          type: array
+          description: List of option expirations for the given symbol.
+          items:
+            type: string
+            format: date
+    com.hellopublic.userapigateway.api.rest.marketdata.quote.GatewayOptionChainRequest:
+      required:
+        - expirationDate
+        - instrument
+      type: object
+      properties:
+        instrument:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayOrderInstrument'
+        expirationDate:
+          type: string
+          description: The expiration date of the option chain.
+          format: date
+    com.hellopublic.userapigateway.api.rest.marketdata.quote.GatewayOptionChainResponse:
+      required:
+        - baseSymbol
+        - calls
+        - puts
+      type: object
+      properties:
+        baseSymbol:
+          type: string
+          description: The base symbol for which the option chain belongs.
+        calls:
+          type: array
+          description: List of call quotes for the given option chain.
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.marketdata.quote.GatewayQuote'
+        puts:
+          type: array
+          description: List of put quotes for the given option chain.
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.marketdata.quote.GatewayQuote'
+    com.hellopublic.hstier2.service.taxlots.api.InstrumentSpecificTaxLotDetails:
+      required:
+        - payloadType
+      type: object
+      properties:
+        payloadType:
+          type: string
+      discriminator:
+        propertyName: payloadType
+    com.hellopublic.hstier2.service.taxlots.api.OptionSpecificTaxLotDetails:
+      required:
+        - expirationDate
+        - optionType
+        - rootSymbol
+        - strikePrice
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/com.hellopublic.hstier2.service.taxlots.api.InstrumentSpecificTaxLotDetails'
+        - type: object
+          properties:
+            rootSymbol:
+              type: string
+            strikePrice:
+              type: string
+            expirationDate:
+              type: string
+              format: date
+            optionType:
+              type: string
+              enum:
+                - CALL
+                - PUT
+    com.hellopublic.hstier2.service.taxlots.api.OrderReference:
+      required:
+        - description
+        - id
+      type: object
+      properties:
+        id:
+          type: string
+          description: Order id, which can be used to link to the order
+        description:
+          type: string
+          description: Textual description of the order
+      description: Reference to an order
+    com.hellopublic.hstier2.service.taxlots.api.OutOfDateStatus:
+      required:
+        - type
+      type: object
+      properties:
+        type:
+          type: string
+          description: The tax lot status type describes how the tax lot is not up-to-date
+          enum:
+            - PRE_EXISTING_OPEN_ORDER_ON_SYMBOL
+            - CORPORATE_ACTION_UNDERWAY
+            - ORDER_OR_TRADE_ON_SYMBOL_TODAY
+            - LOT_ASSIGNED
+            - NOT_REPORTED_YET
+            - AGGREGATE
+        order:
+          $ref: '#/components/schemas/com.hellopublic.hstier2.service.taxlots.api.OrderReference'
+        description:
+          $ref: '#/components/schemas/com.hellopublic.hstier2.service.taxlots.api.OutOfDateStatusDescription'
+      description: Describes how an unrealized lot is out of date
+    com.hellopublic.hstier2.service.taxlots.api.OutOfDateStatusDescription:
+      required:
+        - body
+        - header
+      type: object
+      properties:
+        header:
+          type: string
+          description: Header that describes the tax lot status
+        body:
+          type: string
+          description: Message that describes the tax lot status in more detail.
+      description: Human-readable description of the tax lot status
+    com.hellopublic.hstier2.service.taxlots.api.UnrealizedLotSummary:
+      required:
+        - accountNumber
+        - companyName
+        - costBasis
+        - currentPrice
+        - currentValue
+        - cusip
+        - gainLoss
+        - longTermGainLoss
+        - quantity
+        - shortTermGainLoss
+        - symbol
+        - unitCost
+      type: object
+      properties:
+        accountNumber:
+          type: string
+          description: Account number
+        symbol:
+          type: string
+          description: The ticker
+        cusip:
+          type: string
+          description: cusip
+        companyName:
+          type: string
+          description: Company name
+        quantity:
+          type: string
+          description: The total quantity owned
+        costBasis:
+          type: string
+          description: The costBasis for the lot
+        unitCost:
+          type: string
+          description: The total profit and loss
+        currentPrice:
+          type: string
+          description: The current price. This is calculated once (by Apex) and does not change intraday.
+        currentValue:
+          type: string
+          description: The current value. This is calculated once (by Apex) and does not change intraday.
+        gainLoss:
+          type: string
+          description: The accumulated gain loss for the lots, does not change intraday
+        shortTermGainLoss:
+          type: string
+          description: The short term gain/loss including 40% of sixty-forty lots
+        longTermGainLoss:
+          type: string
+          description: The long term gain/loss including 60% of sixty-forty lots
+        details:
+          description: Instrument specific details, for instance 'strike-price' for options
+          oneOf:
+            - $ref: '#/components/schemas/com.hellopublic.hstier2.service.taxlots.api.OptionSpecificTaxLotDetails'
+        lotSelectionId:
+          type: string
+          description: |-
+            Identifies the tax lot for selection for tax lot selling, `null` if it cannot be selected
+
+            This can happen if the lot refers to a symbol undergoing a corporate action, or if the tax lot represents
+            a position we did not get from Apex but deduced from the trade history on the account.
+
+            Also, lot selection id can only ever be present if the lot summary refer to one specific lot.
+        outOfDateStatus:
+          $ref: '#/components/schemas/com.hellopublic.hstier2.service.taxlots.api.OutOfDateStatus'
+      description: The lots sorted by openDate
+    com.hellopublic.hstier2.service.taxlots.api.UnrealizedLotsSummaryResponse:
+      required:
+        - asOf
+        - longTerm
+        - lots
+        - shortTerm
+        - sixtyFortyTerm
+        - totalProfitLoss
+      type: object
+      properties:
+        asOf:
+          type: string
+          description: The trading session after which this summary was calculated
+          format: date
+        lots:
+          type: array
+          description: The lots sorted by openDate
+          items:
+            $ref: '#/components/schemas/com.hellopublic.hstier2.service.taxlots.api.UnrealizedLotSummary'
+        shortTerm:
+          type: string
+          description: The short term profit or loss
+        longTerm:
+          type: string
+          description: The long term profit or loss
+        sixtyFortyTerm:
+          type: string
+          description: The 60/40 profit loss.
+        totalProfitLoss:
+          type: string
+          description: The total profit or loss
+      description: An overview of the unrealized tax lots
+    com.hellopublic.hstier2.service.taxlots.api.UnrealizedLot:
+      required:
+        - costBasis
+        - currentPrice
+        - currentValue
+        - gainLoss
+        - longTermGainLoss
+        - openDate
+        - quantity
+        - shortTermGainLoss
+        - term
+        - unitCost
+      type: object
+      properties:
+        quantity:
+          type: string
+          description: The total quantity owned
+        costBasis:
+          type: string
+          description: The costBasis for the lot
+        unitCost:
+          type: string
+          description: The total profit and loss
+        currentPrice:
+          type: string
+          description: |-
+            The current price. This is calculated once (by Apex) and does not change intraday.
+            The exception is if you specify an explicit price to calculate gain/loss, in which case the current price will match that.
+        currentValue:
+          type: string
+          description: The current value. This is calculated once (by Apex) and does not change intraday.
+        gainLoss:
+          type: string
+          description: |-
+            The accumulated gain loss for the lots, does not change intraday
+            The exception is if you specify an explicit price to calculate gain/loss, in which case gain/loss will be based on this.
+        openDate:
+          type: string
+          description: The date the lot was opened
+          format: date
+        term:
+          type: string
+          description: LONG, SHORT or SIXTY_FORTY. Will be null if used for a summary.
+        washSale:
+          type: boolean
+          description: If this lot is marked as a wash-sale.
+        shortTermGainLoss:
+          type: string
+          description: The short term gain/loss including 40% of sixty-forty lots
+        longTermGainLoss:
+          type: string
+          description: The long term gain/loss including 60% of sixty-forty lots
+        openBuyPrice:
+          type: string
+          description: The price the position was opened with
+        lotSelectionId:
+          type: string
+          description: |-
+            Identifies the tax lot for selection for tax lot selling, `null` if it cannot be selected
+
+            This can happen if the lot refers to a symbol undergoing a corporate action, or if the tax lot represents
+            a position we did not get from Apex but deduced from the trade history on the account.
+        outOfDateStatus:
+          $ref: '#/components/schemas/com.hellopublic.hstier2.service.taxlots.api.OutOfDateStatus'
+      description: The lots sorted by openDate
+    com.hellopublic.hstier2.service.taxlots.api.UnrealizedLotsDetailResponse:
+      required:
+        - asOf
+        - companyName
+        - symbol
+      type: object
+      properties:
+        asOf:
+          type: string
+          description: The trading session after which this summary was calculated
+          format: date
+        symbol:
+          type: string
+          description: The ticker
+        companyName:
+          type: string
+          description: Company name
+        lots:
+          type: array
+          description: The lots sorted by openDate
+          items:
+            $ref: '#/components/schemas/com.hellopublic.hstier2.service.taxlots.api.UnrealizedLot'
+        details:
+          oneOf:
+            - $ref: '#/components/schemas/com.hellopublic.hstier2.service.taxlots.api.OptionSpecificTaxLotDetails'
+      description: Unrealised lots and information about the instrument
+    com.hellopublic.core.dto.Base64File:
+      type: object
+      properties:
+        fileName:
+          type: string
+        base64Data:
+          type: string
+    com.hellopublic.userapigateway.api.rest.order.GatewayOrder:
+      type: object
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        instrument:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayOrderInstrument'
+        createdAt:
+          type: string
+          description: Creation time of the order
+          format: date-time
+        type:
+          type: string
+          enum:
+            - MARKET
+            - LIMIT
+            - STOP
+            - STOP_LIMIT
+        side:
+          type: string
+          enum:
+            - BUY
+            - SELL
+        status:
+          type: string
+          enum:
+            - NEW
+            - PARTIALLY_FILLED
+            - CANCELLED
+            - QUEUED_CANCELLED
+            - FILLED
+            - REJECTED
+            - PENDING_REPLACE
+            - PENDING_CANCEL
+            - EXPIRED
+            - REPLACED
+        quantity:
+          type: string
+          description: Quantity of the order, mutually exclusive with notional value
+        notionalValue:
+          type: string
+          description: Notional value (dollar amount) of the order, mutually exclusive with quantity
+        expiration:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.OrderExpiration'
+        limitPrice:
+          type: string
+          description: Present if type = LIMIT
+        stopPrice:
+          type: string
+          description: Present if type = STOP
+        closedAt:
+          type: string
+          description: The time the order reached a terminal state, like CANCELLED, FILLED, REJECTED, REPLACED
+          format: date-time
+        openCloseIndicator:
+          type: string
+          description: Present if the order is a single-leg option order, or if the order is a shorting order (sell-to-open or buy-to-close)
+          enum:
+            - OPEN
+            - CLOSE
+        filledQuantity:
+          type: string
+          description: The filled quantity of the order, present if the order had at least one trade
+        averagePrice:
+          type: string
+          description: The average price per unit, present if the order had at least one trade
+        legs:
+          type: array
+          description: If instrument.type = MULTI_LEG_INSTRUMENT, this contains the list of legs
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayOrderLeg'
+        rejectReason:
+          type: string
+    com.hellopublic.userapigateway.api.rest.portfolio.Gain:
+      type: object
+      properties:
+        gainValue:
+          type: string
+        gainPercentage:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+    com.hellopublic.userapigateway.api.rest.portfolio.GatewayAvailableToWithdraw:
+      required:
+        - availableToWithdraw
+        - cashOnlyAvailableToWithdraw
+      type: object
+      properties:
+        cashOnlyAvailableToWithdraw:
+          type: string
+          description: Available to withdraw on cash only. If the account does not have margin investing enabled, then this is the same as availableToWithdraw.
+        availableToWithdraw:
+          type: string
+          description: Total amount available to withdraw.
+      description: Available to withdraw summary
+      nullable: true
+    com.hellopublic.userapigateway.api.rest.portfolio.GatewayBuyingPower:
+      required:
+        - buyingPower
+        - cashOnlyBuyingPower
+        - optionsBuyingPower
+      type: object
+      properties:
+        cashOnlyBuyingPower:
+          type: string
+          description: Buying power available for trading on cash only without taking loans.
+        buyingPower:
+          type: string
+          description: Buying power available for trading marginable assets.
+        optionsBuyingPower:
+          type: string
+          description: Buying power available for trading options.
+    com.hellopublic.userapigateway.api.rest.portfolio.GatewayCostBasis:
+      type: object
+      properties:
+        totalCost:
+          type: string
+          description: What is the dollars paid for entering this position
+          nullable: true
+        unitCost:
+          type: string
+          description: Totalcost divided by the quantity.
+          nullable: true
+        gainValue:
+          type: string
+          description: Amount of dollars this position gained or lost. Current value - total cost
+          nullable: true
+        gainPercentage:
+          type: string
+          description: 100*gainValue/totalcost
+          nullable: true
+        lastUpdate:
+          type: string
+          description: When was the cost cases last updated.
+          format: date-time
+          nullable: true
+      description: |-
+        Cost basis of a position. What the member paid for entering the position. The cost basis is
+         based on tax lots and will factor in wash sales.
+    com.hellopublic.userapigateway.api.rest.portfolio.GatewayPortfolioAccountV2:
+      required:
+        - accountId
+        - accountType
+        - buyingPower
+        - equity
+        - orders
+        - positions
+      type: object
+      properties:
+        accountId:
+          type: string
+          description: Id of the account
+        accountType:
+          type: string
+          description: Type of the account
+          enum:
+            - BROKERAGE
+            - HIGH_YIELD
+            - BOND_ACCOUNT
+            - RIA_ASSET
+            - TREASURY
+            - TRADITIONAL_IRA
+            - ROTH_IRA
+            - ENTITY
+        buyingPower:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.portfolio.GatewayBuyingPower'
+        equity:
+          type: array
+          description: List of equity summaries
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.portfolio.GatewayPortfolioEquityV2'
+        positions:
+          type: array
+          description: List of positions
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.portfolio.GatewayPortfolioPosition'
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayOrder'
+        strategies:
+          type: array
+          description: List of multi-leg option strategies. Null if backend doesn't support strategies.
+          nullable: true
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.portfolio.GatewayStrategy'
+        cash:
+          type: string
+          description: Cash value from account summary
+          nullable: true
+        totalAccountValue:
+          type: string
+          description: Total account value
+          nullable: true
+        availableToWithdraw:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.portfolio.GatewayAvailableToWithdraw'
+      description: Portfolio for the account
+    com.hellopublic.userapigateway.api.rest.portfolio.GatewayPortfolioEquityV2:
+      required:
+        - type
+        - value
+      type: object
+      properties:
+        type:
+          type: string
+          description: Type of asset.
+          enum:
+            - CASH
+            - JIKO_ACCOUNT
+            - STOCK
+            - OPTIONS_LONG
+            - OPTIONS_SHORT
+            - BONDS
+            - CRYPTO
+        value:
+          type: string
+          description: Total value for the given asset type.
+        percentageOfPortfolio:
+          type: string
+          description: |-
+            The percentage of the portfolio this asset type constitutes.
+                                          The percentage number is given with 2 decimals.
+          nullable: true
+      description: Portfolio equity summary
+    com.hellopublic.userapigateway.api.rest.portfolio.GatewayPortfolioInstrument:
+      type: object
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - EQUITY
+            - OPTION
+            - CRYPTO
+            - ALT
+            - TREASURY
+            - BOND
+            - INDEX
+    com.hellopublic.userapigateway.api.rest.portfolio.GatewayPortfolioPosition:
+      required:
+        - instrument
+        - quantity
+        - strategyIds
+      type: object
+      properties:
+        instrument:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.portfolio.GatewayPortfolioInstrument'
+        quantity:
+          type: string
+          description: The quantity of the position.
+        openedAt:
+          type: string
+          description: When was this position opened. Null if unknown.
+          format: date-time
+          nullable: true
+        currentValue:
+          type: string
+          description: How much the position is worth. Calculated from quantity * lastSalePrice.
+          nullable: true
+        percentOfPortfolio:
+          type: string
+          description: The percent that this position makes of the entire portfolio.
+          nullable: true
+        lastPrice:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.portfolio.Price'
+        instrumentGain:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.portfolio.Gain'
+        positionDailyGain:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.portfolio.Gain'
+        costBasis:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.portfolio.GatewayCostBasis'
+        strategyIds:
+          type: array
+          description: List of strategy IDs this position is part of. Empty list for single-leg positions not part of any strategy.
+          items:
+            type: string
+      description: Position in portfolio
+    com.hellopublic.userapigateway.api.rest.portfolio.GatewayStrategy:
+      required:
+        - displayName
+        - optionLegs
+        - quantity
+        - strategyId
+      type: object
+      properties:
+        strategyId:
+          type: string
+          description: Unique identifier for the strategy
+        displayName:
+          type: string
+          description: Display name for the strategy (e.g., "$180/$185 Call Spread")
+        quantity:
+          type: string
+          description: Quantity of the strategy
+        currentValue:
+          type: string
+          description: Current value of the strategy
+        percentOfPortfolio:
+          type: string
+          description: Percentage of the total portfolio this strategy represents
+        lastPrice:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.portfolio.Price'
+        positionDailyGain:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.portfolio.Gain'
+        costBasis:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.portfolio.GatewayCostBasis'
+        optionLegs:
+          type: array
+          description: List of option legs that make up this strategy
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.portfolio.GatewayStrategyLeg'
+      description: Represents a multi-leg option strategy in the portfolio
+    com.hellopublic.userapigateway.api.rest.portfolio.GatewayStrategyLeg:
+      required:
+        - positionType
+        - ratioQuantity
+        - symbol
+      type: object
+      properties:
+        symbol:
+          type: string
+          description: The symbol of the leg
+        positionType:
+          type: string
+          description: The position type (LONG or SHORT)
+        ratioQuantity:
+          type: string
+          description: The ratio quantity of this leg in the strategy
+      description: Represents a single leg of an option strategy
+    com.hellopublic.userapigateway.api.rest.portfolio.Price:
+      type: object
+      properties:
+        lastPrice:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+    com.hellopublic.userapigateway.api.rest.history.GatewayHistoryResponsePage:
+      type: object
+      properties:
+        transactions:
+          type: array
+          description: List of transactions
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.history.GatewayHistoryTransaction'
+        nextToken:
+          type: string
+          description: Token to retrieve the next page of results
+          nullable: true
+        start:
+          type: string
+          description: Start timestamp of the history query
+          format: date-time
+          nullable: true
+        end:
+          type: string
+          description: End timestamp of the history query
+          format: date-time
+          nullable: true
+        pageSize:
+          type: integer
+          description: Number of items to return
+          format: int32
+          nullable: true
+      description: Gateway history response page
+    com.hellopublic.userapigateway.api.rest.history.GatewayHistoryTransaction:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          description: The timestamp when the transaction happened
+          format: date-time
+        id:
+          type: string
+          description: The id of the transaction
+        type:
+          type: string
+          description: The type of the transaction
+          enum:
+            - TRADE
+            - MONEY_MOVEMENT
+            - POSITION_ADJUSTMENT
+        subType:
+          type: string
+          description: The subtype of the transaction
+          enum:
+            - DEPOSIT
+            - WITHDRAWAL
+            - DEPOSIT_RETURNED
+            - WITHDRAWAL_RETURNED
+            - DIVIDEND
+            - FEE
+            - REWARD
+            - TREASURY_BILL_TRANSFER
+            - INTEREST
+            - TRADE
+            - TRANSFER
+            - MISC
+        accountNumber:
+          type: string
+          description: The account the transaction happened on
+        symbol:
+          type: string
+          description: The symbol of the transaction
+        securityType:
+          type: string
+          description: The security type of the transaction
+          enum:
+            - EQUITY
+            - OPTION
+            - CRYPTO
+            - ALT
+            - TREASURY
+            - BOND
+        side:
+          type: string
+          description: The side of the transaction - relevant for trades
+          enum:
+            - BUY
+            - SELL
+        description:
+          type: string
+          description: The description of the transaction
+        netAmount:
+          type: string
+          description: The net amount of the transaction
+        principalAmount:
+          type: string
+          description: The principal amount of the transaction
+        quantity:
+          type: string
+          description: The quantity of the transaction
+        direction:
+          type: string
+          description: The direction of the transaction
+          enum:
+            - INCOMING
+            - OUTGOING
+        fees:
+          type: string
+          description: The fees of the transaction
+      description: Represents a transaction in the history of an account
+    com.hellopublic.holdingsystem.core.types.OptionPriceIncrement:
+      type: object
+      properties:
+        incrementBelow3:
+          type: string
+        incrementAbove3:
+          type: string
+      description: Record representing price increments below and above $3.
+    com.hellopublic.userapigateway.api.rest.order.ApiInstrumentDto:
+      required:
+        - fractionalTrading
+        - instrument
+        - optionSpreadTrading
+        - optionTrading
+        - trading
+      type: object
+      properties:
+        instrument:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayOrderInstrument'
+        trading:
+          type: string
+          enum:
+            - BUY_AND_SELL
+            - LIQUIDATION_ONLY
+            - DISABLED
+        fractionalTrading:
+          type: string
+          enum:
+            - BUY_AND_SELL
+            - LIQUIDATION_ONLY
+            - DISABLED
+        optionTrading:
+          type: string
+          enum:
+            - BUY_AND_SELL
+            - LIQUIDATION_ONLY
+            - DISABLED
+        optionSpreadTrading:
+          type: string
+          enum:
+            - BUY_AND_SELL
+            - LIQUIDATION_ONLY
+            - DISABLED
+        instrumentDetails:
+          oneOf:
+            - $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.instrumentdetails.ApiInstrumentDetailsBond'
+            - $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.instrumentdetails.ApiInstrumentDetailsCrypto'
+        shortingAvailability:
+          type: string
+          description: The short-selling availability.
+          enum:
+            - NOT_SHORTABLE
+            - EASY_TO_BORROW
+            - HARD_TO_BORROW
+        hardToBorrowPercentageRate:
+          type: string
+          description: The hard to borrow rate as a percentage value.
+        optionContractPriceIncrements:
+          $ref: '#/components/schemas/com.hellopublic.holdingsystem.core.types.OptionPriceIncrement'
+        exchange:
+          type: string
+          description: Exchange where the instrument is traded.
+        exchangeName:
+          type: string
+          description: The name of the exchange where the instrument is traded.
+    com.hellopublic.userapigateway.api.rest.order.ApiInstrumentResponse:
+      type: object
+      properties:
+        instruments:
+          type: array
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.ApiInstrumentDto'
+    com.hellopublic.userapigateway.api.rest.order.instrumentdetails.ApiInstrumentDetails:
+      required:
+        - payloadType
+      type: object
+      properties:
+        payloadType:
+          type: string
+      discriminator:
+        propertyName: payloadType
+    com.hellopublic.userapigateway.api.rest.order.instrumentdetails.ApiInstrumentDetailsBond:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.instrumentdetails.ApiInstrumentDetails'
+        - type: object
+          properties:
+            hasOutstanding:
+              type: boolean
+    com.hellopublic.userapigateway.api.rest.order.instrumentdetails.ApiInstrumentDetailsCrypto:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.instrumentdetails.ApiInstrumentDetails'
+        - type: object
+          properties:
+            cryptoQuantityPrecision:
+              type: integer
+              format: int32
+            cryptoPricePrecision:
+              type: integer
+              format: int32
+            tradableInNewYork:
+              type: boolean
+    PageableObject:
+      type: object
+      properties:
+        offset:
+          type: integer
+          format: int64
+        pageSize:
+          type: integer
+          format: int32
+        sort:
+          $ref: '#/components/schemas/SortObject'
+        paged:
+          type: boolean
+        unpaged:
+          type: boolean
+        pageNumber:
+          type: integer
+          format: int32
+    SortObject:
+      type: object
+      properties:
+        empty:
+          type: boolean
+        sorted:
+          type: boolean
+        unsorted:
+          type: boolean
+    com.hellopublic.fixedincomegateway.instrument.InstrumentDto:
+      type: object
+      properties:
+        cusip:
+          type: string
+        issuer:
+          type: string
+        issuerSymbol:
+          type: string
+        symbol:
+          type: string
+        description:
+          type: string
+        descriptionShort:
+          type: string
+        bondType:
+          type: string
+        treasurySubtype:
+          type: string
+        treasuryDuration:
+          type: string
+        bondStatus:
+          type: string
+        issueDate:
+          type: string
+          format: date
+        issuePrice:
+          type: string
+        issueSize:
+          type: string
+        maturityDate:
+          type: string
+          format: date
+        rating:
+          type: string
+        ratingCategory:
+          type: string
+        coupon:
+          type: string
+        couponFrequency:
+          type: string
+        nextCouponDate:
+          type: string
+          format: date
+        parValue:
+          type: string
+        accruedInterest:
+          type: string
+        callable:
+          type: boolean
+        nextCallDate:
+          type: string
+          format: date
+        nextCallPrice:
+          type: string
+        currentYield:
+          type: string
+        currentPrice:
+          type: string
+        spOutlook:
+          type: string
+        spOutlookDate:
+          type: string
+          format: date
+        spCreditwatch:
+          type: string
+        spCreditwatchDate:
+          type: string
+          format: date
+        perpetual:
+          type: boolean
+        countryIssue:
+          type: string
+        countryDomicile:
+          type: string
+        daysUntilMaturity:
+          type: integer
+          format: int64
+        liquidityRating:
+          type: string
+        seniority:
+          type: string
+        partialPar:
+          type: boolean
+        minimumOrderSize:
+          type: string
+        minimumOrderIncrement:
+          type: string
+    org.springframework.data.domain.PageCom.hellopublic.fixedincomegateway.instrument.InstrumentDto:
+      type: object
+      properties:
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/com.hellopublic.fixedincomegateway.instrument.InstrumentDto'
+        number:
+          type: integer
+          format: int32
+        numberOfElements:
+          type: integer
+          format: int32
+        sort:
+          $ref: '#/components/schemas/SortObject'
+        pageable:
+          $ref: '#/components/schemas/PageableObject'
+        first:
+          type: boolean
+        last:
+          type: boolean
+        empty:
+          type: boolean
+    com.hellopublic.userapigateway.api.rest.account.AccountSettings:
+      type: object
+      properties:
+        accountId:
+          type: string
+        accountType:
+          type: string
+          enum:
+            - BROKERAGE
+            - HIGH_YIELD
+            - BOND_ACCOUNT
+            - RIA_ASSET
+            - TREASURY
+            - TRADITIONAL_IRA
+            - ROTH_IRA
+            - ENTITY
+        optionsLevel:
+          type: string
+          enum:
+            - NONE
+            - LEVEL_1
+            - LEVEL_2
+            - LEVEL_3
+            - LEVEL_4
+        brokerageAccountType:
+          type: string
+          enum:
+            - CASH
+            - MARGIN
+        tradePermissions:
+          type: string
+          enum:
+            - BUY_AND_SELL
+            - RESTRICTED_SETTLED_FUNDS_ONLY
+            - RESTRICTED_CLOSE_ONLY
+            - RESTRICTED_NO_TRADING
+    com.hellopublic.userapigateway.api.rest.account.AccountSettingsResponse:
+      type: object
+      properties:
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.account.AccountSettings'
+    com.hellopublic.userapigateway.api.rest.options.GreekResponse:
+      required:
+        - symbol
+      type: object
+      properties:
+        symbol:
+          type: string
+          description: The OSI-normalized format of the option symbol
+        greeks:
+          $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.options.OptionGreeks'
+    com.hellopublic.userapigateway.api.rest.options.GreeksResponse:
+      type: object
+      properties:
+        greeks:
+          type: array
+          description: List of greeks for each symbol in the request
+          items:
+            $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.options.GreekResponse'
+    com.hellopublic.userapigateway.api.rest.marketdata.bonddetails.BondDetailsResponse:
+      type: object
+      properties:
+        cusip:
+          type: string
+          description: CUSIP identifier
+        issuer:
+          type: string
+          description: Name of the bond issuer
+          nullable: true
+        issuerSymbol:
+          type: string
+          description: Symbol of the bond issuer
+          nullable: true
+        symbol:
+          type: string
+          description: Bond symbol (typically CUSIP-BOND format)
+          nullable: true
+        description:
+          type: string
+          description: Full description of the bond
+          nullable: true
+        descriptionShort:
+          type: string
+          description: Short description of the bond
+          nullable: true
+        bondType:
+          type: string
+          description: Type of bond (e.g., TREASURY, CORPORATE, MUNICIPAL)
+          nullable: true
+        treasurySubtype:
+          type: string
+          description: Treasury subtype (e.g., STRIPS)
+          nullable: true
+        treasuryDuration:
+          type: string
+          description: Treasury duration (e.g., 30Y)
+          nullable: true
+        bondStatus:
+          type: string
+          description: Bond status (e.g., OUTSTANDING)
+          nullable: true
+        issueDate:
+          type: string
+          description: Date when the bond was issued
+          format: date
+          nullable: true
+        issuePrice:
+          type: string
+          description: Original price at which the bond was issued
+          nullable: true
+        issueSize:
+          type: string
+          description: Total size of the bond issue
+          nullable: true
+        maturityDate:
+          type: string
+          description: Date when the bond matures
+          format: date
+          nullable: true
+        rating:
+          type: string
+          description: Credit rating of the bond
+          nullable: true
+        ratingCategory:
+          type: string
+          description: Rating category (e.g., INVESTMENT_GRADE)
+          nullable: true
+        coupon:
+          type: string
+          description: Coupon rate of the bond
+          nullable: true
+        couponFrequency:
+          type: string
+          description: Frequency of coupon payments
+          nullable: true
+        nextCouponDate:
+          type: string
+          description: Date of the next coupon payment
+          format: date
+          nullable: true
+        parValue:
+          type: string
+          description: Par value of the bond
+          nullable: true
+        accruedInterest:
+          type: string
+          description: Accrued interest on the bond
+          nullable: true
+        callable:
+          type: boolean
+          description: Whether the bond is callable
+          nullable: true
+        nextCallDate:
+          type: string
+          description: Date of the next call option
+          format: date
+          nullable: true
+        nextCallPrice:
+          type: string
+          description: Price at which the bond can be called
+          nullable: true
+        currentYield:
+          type: string
+          description: Current yield of the bond
+          nullable: true
+        currentPrice:
+          type: string
+          description: Current market price of the bond
+          nullable: true
+        spOutlook:
+          type: string
+          description: S&P rating outlook
+          nullable: true
+        spOutlookDate:
+          type: string
+          description: Date of S&P outlook
+          format: date
+          nullable: true
+        spCreditwatch:
+          type: string
+          description: S&P creditwatch status
+          nullable: true
+        spCreditwatchDate:
+          type: string
+          description: Date of S&P creditwatch
+          format: date
+          nullable: true
+        perpetual:
+          type: boolean
+          description: Whether the bond is perpetual
+          nullable: true
+        countryIssue:
+          type: string
+          description: Country where the bond was issued
+          nullable: true
+        countryDomicile:
+          type: string
+          description: Country of issuer domicile
+          nullable: true
+        daysUntilMaturity:
+          type: integer
+          description: Number of days until the bond matures
+          format: int64
+          nullable: true
+        liquidityRating:
+          type: string
+          description: Liquidity rating of the bond
+          nullable: true
+        seniority:
+          type: string
+          description: Seniority level of the bond
+          nullable: true
+        partialPar:
+          type: boolean
+          description: Whether partial par trading is allowed
+        minimumOrderSize:
+          type: string
+          description: Minimum order size for trading
+          nullable: true
+        minimumOrderIncrement:
+          type: string
+          description: Minimum order increment for trading
+          nullable: true
+      description: Bond details response combining instrument data and quote information
+    Bar:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        open:
+          type: string
+        close:
+          type: string
+        high:
+          type: string
+        low:
+          type: string
+        value:
+          type: string
+        volume:
+          type: integer
+        gainAmount:
+          type: string
+          nullable: true
+        gainPercentage:
+          type: string
+          nullable: true
+      required:
+        - timestamp
+        - open
+        - close
+        - high
+        - low
+        - value
+        - volume
+    LastSessionClose:
+      type: object
+      properties:
+        close:
+          type: string
+        closeDate:
+          type: string
+        change:
+          type: string
+          nullable: true
+        percentChange:
+          type: string
+          nullable: true
+      required:
+        - close
+        - closeDate
+    RegularSessionClosingData:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        price:
+          type: string
+          nullable: true
+    MarketSessionBars:
+      type: object
+      properties:
+        expectedBars:
+          type: integer
+        bars:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bar'
+      required:
+        - expectedBars
+        - bars
+    BarsResponse:
+      type: object
+      properties:
+        symbol:
+          type: string
+        period:
+          type: string
+        totalExpectedBars:
+          type: integer
+        previousClosePrice:
+          type: string
+          nullable: true
+        totalGainLoss:
+          type: string
+          nullable: true
+        totalGainLossPercentage:
+          type: string
+          nullable: true
+        preMarket:
+          $ref: '#/components/schemas/MarketSessionBars'
+        regularMarket:
+          $ref: '#/components/schemas/MarketSessionBars'
+        afterMarket:
+          $ref: '#/components/schemas/MarketSessionBars'
+        preMarketOvernight:
+          $ref: '#/components/schemas/MarketSessionBars'
+          description: DAY chart only. Overnight ATS bars 00:00-04:00 ET. Only present when tradingSessionToggle=ALL_SESSIONS. The WEEK chart does not use this field; it merges overnight bars into regularMarket instead.
+        postMarketOvernight:
+          $ref: '#/components/schemas/MarketSessionBars'
+          description: DAY chart only. Overnight ATS bars 20:00-24:00 ET. Only present when tradingSessionToggle=ALL_SESSIONS. The WEEK chart does not use this field; it merges overnight bars into regularMarket instead.
+        lastTradingSessionClose:
+          $ref: '#/components/schemas/LastSessionClose'
+          deprecated: true
+        regularSessionClosingData:
+          $ref: '#/components/schemas/RegularSessionClosingData'
+          deprecated: true
+        lastRegularTradingSessionClose:
+          $ref: '#/components/schemas/LastSessionClose'
+        leadingFill:
+          $ref: '#/components/schemas/LeadingFill'
+          description: Present only when the first available data point starts after the requested period (e.g. a recently listed asset, or an asset younger than the selected range). Describes a flat, non-scrubbable lead-in the client should draw from the period start to the first real bar. Not emitted for the DAY chart or the ALL / SINCE_PURCHASE periods.
+      required:
+        - symbol
+        - period
+        - totalExpectedBars
+        - preMarket
+        - regularMarket
+        - afterMarket
+    LeadingFill:
+      type: object
+      properties:
+        startTimestamp:
+          type: string
+          description: ISO-8601 start of the requested (visible) period — where the flat fill begins.
+        endTimestamp:
+          type: string
+          description: ISO-8601 timestamp of the first real data point — where the flat fill ends. Matches the first bar's timestamp.
+        value:
+          type: string
+          description: The value to draw the flat fill at (equal to the first real data point's value, so the fill meets the series).
+        count:
+          type: integer
+          description: Number of leading grey bars to draw (same meaning for every timeframe). Index-based renderers use this to reserve/offset the leading width.
+        includedInTotalExpectedBars:
+          type: boolean
+          description: 'Whether `count` is already part of `totalExpectedBars`. false (non-DAY): additive — prepend `count` grey bars in front of the real series (total slots = count + totalExpectedBars). true (DAY): a subset of the fixed-session `totalExpectedBars` — the real bars start at index `count` (grey + real + trailing-empty = totalExpectedBars).'
+      required:
+        - startTimestamp
+        - endTimestamp
+        - value
+        - count
+        - includedInTotalExpectedBars
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Paste the `accessToken` returned by `POST /userapiauthservice/personal/access-tokens`.
+info:
+  title: User Api Gateway REST API
+  version: '1'
+openapi: 3.0.1
+paths:
+  /userapiauthservice/personal/access-tokens:
+    post:
+      tags:
+        - authorization
+      summary: Create API Access Token
+      description: Generates a new personal Access Token (JWT) with a specified validity in minutes, using an existing personal Secret Token. The personal Secret Token must be generated from the user's settings page. Secret Tokens are long-lived but revocable, while Access Tokens are short-lived and expire after the specified validity period. The Access Token returned from this operation is required for authorization in all other subsequent API requests.
+      operationId: create-personal-access-token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/com.hellopublic.userapiauthservice.api.personal.CreateAccessTokenRequest'
+        required: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapiauthservice.api.personal.CreateAccessTokenResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapiauthservice.domain.error.ErrorBody'
+              examples:
+                Invalid secret:
+                  description: Invalid secret
+                  value:
+                    errorCode: user_api_auth.personal.invalid_secret
+                    message: Invalid secret
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapiauthservice.domain.error.ErrorBody'
+              examples:
+                Too many requests. Please wait for a few minutes and try again.:
+                  description: Too many requests. Please wait for a few minutes and try again.
+                  value:
+                    errorCode: user_api_auth.personal.too_many_requests
+                    message: Too many requests. Please wait for a few minutes and try again.
+      security: []
+  /userapigateway/trading/account:
+    get:
+      tags:
+        - list-accounts
+      summary: Get accounts
+      description: |
+        Retrieves the list of financial accounts associated with the authenticated user.
+        This includes brokerage, retirement, and high-yield cash accounts.
+
+        The response contains account objects that represent each available account.
+
+        Note: The `accountId` returned by this endpoint is required for most subsequent API operations.
+        It serves as a stable, persistent identifier for the lifetime of the account.
+      operationId: get-accounts
+      responses:
+        '200':
+          description: Accounts retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.account.AccountSettingsResponse'
+        '401':
+          description: Unauthorized access
+  /userapigateway/trading/{accountId}/portfolio/v2:
+    get:
+      tags:
+        - account-details
+      summary: Retrieve an account portfolio details snapshot
+      description: Retrieves a snapshot of a specified account’s portfolio, including positions, equity breakdown, buying power, and open orders. The account must exist and belong to the authenticated client.
+      operationId: get-account-portfolio-v2
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        '200':
+          description: Portfolio details successfully retrieved
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.portfolio.GatewayPortfolioAccountV2'
+        '404':
+          description: Account not found, does not belong to the client, or is of an unsupported type.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.portfolio.GatewayPortfolioAccountV2'
+  /userapigateway/trading/{accountId}/history:
+    get:
+      tags:
+        - account-details
+      summary: Retrieve account history
+      description: Fetches a paginated list of historical account events — including trades, money movements, and position adjustments — for the specified account. Supports optional time-range filtering (start/end) and pagination via the nextToken continuation token.
+      operationId: get-history
+      parameters:
+        - name: accountId
+          in: path
+          description: Target account ID.
+          required: true
+          schema:
+            minLength: 1
+            type: string
+        - name: start
+          in: query
+          description: 'Start timestamp in ISO 8601 format with timezone. Example: 2025-01-15T09:00:00-05:00 (9 AM EST, New York time). Formated "YYYY-MM-DDTHH:MM:SSZ"'
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end
+          in: query
+          description: 'End timestamp in ISO 8601 format with timezone. Example: 2025-04-10T09:00:00-04:00 (9 AM EDT, New York time). Formated "YYYY-MM-DDTHH:MM:SSZ"'
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: pageSize
+          in: query
+          description: Maximum number of records to return.
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: nextToken
+          in: query
+          description: Pagination token for fetching the next result set.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: History retrieved successfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.history.GatewayHistoryResponsePage'
+        '400':
+          description: Invalid account ID or access violation.
+  /userapigateway/trading/{accountId}/taxlots/unrealized:
+    get:
+      tags:
+        - tax-lot-selling
+      summary: Retrieve unrealized tax lots
+      description: Returns an overview of unrealized tax lots for the specified account. Requires the `trading.read` scope. Available to individual investors.
+      operationId: get-unrealized-tax-lots
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        '200':
+          description: Unrealized tax lots successfully retrieved
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.hstier2.service.taxlots.api.UnrealizedLotsSummaryResponse'
+        '404':
+          description: Account not found or does not belong to the client
+  /userapigateway/trading/{accountId}/taxlots/unrealized/{symbol}:
+    get:
+      tags:
+        - tax-lot-selling
+      summary: Retrieve unrealized tax lots for a specific symbol
+      description: Returns detailed unrealized tax lots for a specific symbol in the account. Requires the `trading.read` scope. Available to individual investors.
+      operationId: get-unrealized-tax-lots-for-symbol
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            minLength: 1
+            type: string
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            minLength: 1
+            type: string
+        - name: price
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Unrealized tax lots for symbol successfully retrieved
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.hstier2.service.taxlots.api.UnrealizedLotsDetailResponse'
+        '404':
+          description: Account not found or does not belong to the client
+  /userapigateway/trading/{accountId}/taxlots/csv/unrealized:
+    get:
+      tags:
+        - tax-lot-selling
+      summary: Retrieve unrealized tax lots as CSV
+      description: Returns unrealized tax lots for the specified account in CSV format. Requires the `trading.read` scope. Available to individual investors.
+      operationId: get-unrealized-tax-lots-csv
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        '200':
+          description: Unrealized tax lots CSV successfully retrieved
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.core.dto.Base64File'
+        '404':
+          description: Account not found or does not belong to the client
+  /userapigateway/trading/instruments:
+    get:
+      tags:
+        - instrument-details
+      summary: Retrieve all trading instruments
+      description: |
+        Retrieves all available trading instruments with optional filtering capabilities.
+
+        This endpoint returns a comprehensive list of instruments available for trading,
+        with support for filtering by security type and various trading capabilities.
+        All filter parameters are optional and can be combined to narrow down results.
+      operationId: get-all-instruments
+      parameters:
+        - name: typeFilter
+          in: query
+          description: Optional set of security types to filter by
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - EQUITY
+                - OPTION
+                - MULTI_LEG_INSTRUMENT
+                - CRYPTO
+                - ALT
+                - TREASURY
+                - BOND
+                - INDEX
+        - name: tradingFilter
+          in: query
+          description: Optional set of trading statuses to filter by
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - BUY_AND_SELL
+                - LIQUIDATION_ONLY
+                - DISABLED
+        - name: fractionalTradingFilter
+          in: query
+          description: Optional set of fractional trading statuses to filter by
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - BUY_AND_SELL
+                - LIQUIDATION_ONLY
+                - DISABLED
+        - name: optionTradingFilter
+          in: query
+          description: Optional set of option trading statuses to filter by
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - BUY_AND_SELL
+                - LIQUIDATION_ONLY
+                - DISABLED
+        - name: optionSpreadTradingFilter
+          in: query
+          description: Optional set of option spread trading statuses to filter by
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - BUY_AND_SELL
+                - LIQUIDATION_ONLY
+                - DISABLED
+      responses:
+        '200':
+          description: Instruments retrieved successfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.ApiInstrumentResponse'
+  /userapigateway/trading/instruments/{symbol}/{type}:
+    get:
+      tags:
+        - instrument-details
+      summary: Retrieve a single instrument
+      description: Retrieves detailed reference data for a single trading instrument, identified by its symbol and security type. Use this when you already know the symbol and type.
+      operationId: get-instrument
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - EQUITY
+              - OPTION
+              - MULTI_LEG_INSTRUMENT
+              - CRYPTO
+              - ALT
+              - TREASURY
+              - BOND
+              - INDEX
+      responses:
+        '200':
+          description: Instrument retrieved successfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.ApiInstrumentDto'
+        '400':
+          description: Invalid symbol or type.
+        '404':
+          description: Instrument not found.
+  /userapigateway/trading/instruments/bonds:
+    get:
+      tags:
+        - instrument-details
+      summary: Filtered search for fixed income instruments
+      description: Returns a paged list of fixed income instruments from the bonds hub with support for filtering, sorting, and pagination.
+      operationId: search-bonds
+      parameters:
+        - name: pageNumber
+          in: query
+          description: Page number (zero-based)
+          schema:
+            type: integer
+            default: 0
+        - name: pageSize
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            default: 20
+        - name: sortProperty
+          in: query
+          description: Property to sort by
+          schema:
+            type: string
+        - name: sortDirection
+          in: query
+          description: Sort direction
+          schema:
+            type: string
+            default: DESC
+            enum:
+              - ASC
+              - DESC
+        - name: issuer
+          in: query
+          description: Filter by issuer name
+          schema:
+            type: string
+        - name: issuerSymbol
+          in: query
+          description: Filter by issuer symbol(s)
+          schema:
+            type: array
+            items:
+              type: string
+        - name: bondStatus
+          in: query
+          description: Filter by bond status
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - LIQUIDATED
+                - CONVERTED
+                - FUNGED
+                - REPAID
+                - RESTRUCTURED
+                - CALLED
+                - DEFAULTED
+                - MATURED
+                - OUTSTANDING
+                - PUT
+                - TENDERED
+                - REPURCHASED
+                - PRE_ISSUANCE
+                - UNKNOWN
+        - name: bondType
+          in: query
+          description: Filter by bond type(s)
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - AGENCY
+                - CD
+                - CORPORATE
+                - GOVERNMENT
+                - MUNICIPAL
+                - TREASURY
+        - name: treasurySubtype
+          in: query
+          description: Filter by treasury subtype(s)
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - BOND
+                - BILL
+                - NOTE
+                - STRIPS
+                - TIPS
+                - FLOATING
+        - name: rating
+          in: query
+          description: Filter by S&P credit rating(s)
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - AAA
+                - AA+
+                - AA
+                - AA-
+                - SP-1+
+                - A-1+
+                - A+
+                - A
+                - A-1
+                - A-
+                - SP-1
+                - BBB+
+                - A-2
+                - BBB
+                - BBB-
+                - A-3
+                - BB+
+                - BB
+                - BB-
+                - B+
+                - B
+                - B-
+                - CCC+
+                - CCC
+                - CCC-
+                - CC
+                - C
+                - D
+                - NR
+        - name: ratingCategory
+          in: query
+          description: Filter by rating category
+          schema:
+            type: string
+            enum:
+              - INVESTMENT_GRADE
+              - SPECULATIVE_GRADE
+        - name: spOutlook
+          in: query
+          description: Filter by S&P outlook
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - POSITIVE
+                - NEGATIVE
+                - DEVELOPING
+                - STABLE
+                - NOT_RATED
+                - NOT_MEANINGFUL
+        - name: spCreditwatch
+          in: query
+          description: Filter by S&P creditwatch status
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - POSITIVE
+                - NEGATIVE
+                - DEVELOPING
+                - NOT_MEANINGFUL
+        - name: couponFrequency
+          in: query
+          description: Filter by coupon payment frequency
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - AT_MATURITY
+                - ZERO
+                - MONTHLY
+                - QUARTERLY
+                - SEMI_ANNUAL
+                - ANNUAL
+        - name: minCoupon
+          in: query
+          description: Minimum coupon rate
+          schema:
+            type: number
+        - name: maxCoupon
+          in: query
+          description: Maximum coupon rate
+          schema:
+            type: number
+        - name: minMaturityDate
+          in: query
+          description: Minimum maturity date (yyyy-MM-dd format). Defaults to today + 14 days to exclude bonds nearing maturity with volatile yields.
+          schema:
+            type: string
+            format: date
+        - name: maxMaturityDate
+          in: query
+          description: Maximum maturity date (yyyy-MM-dd format)
+          schema:
+            type: string
+            format: date
+        - name: minCurrentYield
+          in: query
+          description: Minimum current yield
+          schema:
+            type: number
+        - name: maxCurrentYield
+          in: query
+          description: Maximum current yield
+          schema:
+            type: number
+        - name: minParValue
+          in: query
+          description: Minimum par value
+          schema:
+            type: number
+        - name: maxParValue
+          in: query
+          description: Maximum par value
+          schema:
+            type: number
+        - name: minLiquidityRating
+          in: query
+          description: Minimum liquidity rating
+          schema:
+            type: number
+        - name: maxLiquidityRating
+          in: query
+          description: Maximum liquidity rating
+          schema:
+            type: number
+        - name: liquidityRating
+          in: query
+          description: Filter by specific liquidity rating(s) - Scores from 1 (low) to 5 (high)
+          schema:
+            type: array
+            items:
+              type: number
+        - name: callable
+          in: query
+          description: Filter by callable status
+          schema:
+            type: boolean
+        - name: perpetual
+          in: query
+          description: Filter by perpetual bond status
+          schema:
+            type: boolean
+        - name: partialPar
+          in: query
+          description: Filter by partial par status
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Instruments retrieved successfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/org.springframework.data.domain.PageCom.hellopublic.fixedincomegateway.instrument.InstrumentDto'
+  /userapigateway/marketdata/{accountId}/quotes:
+    post:
+      tags:
+        - market-data
+      summary: Retrieve real-time quotes
+      description: 'Returns real-time market quotes for a set of instruments. Requires the marketdata scope and is available to individual investors. Supported instrument types: EQUITY, OPTION, CRYPTO, and INDEX.'
+      operationId: get-quotes
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            minLength: 1
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.marketdata.quote.GatewayQuoteRequest'
+        required: true
+      responses:
+        '200':
+          description: Quotes retrieved successfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.marketdata.quote.GatewayQuoteResponse'
+        '400':
+          description: 'Invalid input: instrument not found, or the account is invalid or unauthorized.'
+  /userapigateway/marketdata/{accountId}/bond-details/{symbol}:
+    get:
+      tags:
+        - market-data
+      summary: Retrieve bond details
+      description: Returns comprehensive bond instrument details including pricing, ratings, and maturity information. Requires the `marketdata` scope. Available to individual investors.
+      operationId: get-bond-details
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            minLength: 1
+            type: string
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        '200':
+          description: Bond details retrieved successfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.marketdata.bonddetails.BondDetailsResponse'
+        '400':
+          description: 'Invalid input: bond symbol not found or invalid format.'
+  /userapigateway/marketdata/{accountId}/option-expirations:
+    post:
+      tags:
+        - market-data
+      summary: Retrieve option expiration dates
+      description: 'Returns available option expiration dates for a given instrument. Requires the `marketdata` scope. Available to individual investors. Supported types: EQUITY, UNDERLYING_SECURITY_FOR_INDEX_OPTION.'
+      operationId: get-option-expirations
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            minLength: 1
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.marketdata.quote.GatewayOptionExpirationsRequest'
+        required: true
+      responses:
+        '200':
+          description: Expiration dates retrieved successfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.marketdata.quote.GatewayOptionExpirationsResponse'
+        '400':
+          description: 'Invalid input: unsupported instrument type, nonexistent instrument, invalid account, or unauthorized access.'
+  /userapigateway/marketdata/{accountId}/option-chain:
+    post:
+      tags:
+        - market-data
+      summary: Retrieve option chain
+      description: 'Returns the option chain for a given instrument. Requires the `marketdata` scope. Available to individual investors. Supported types: EQUITY, UNDERLYING_SECURITY_FOR_INDEX_OPTION.'
+      operationId: get-option-chain
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            minLength: 1
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.marketdata.quote.GatewayOptionChainRequest'
+        required: true
+      responses:
+        '200':
+          description: Option chain retrieved successfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.marketdata.quote.GatewayOptionChainResponse'
+        '400':
+          description: 'Invalid input: unsupported instrument type, nonexistent instrument, invalid account, or unauthorized access.'
+  /userapigateway/trading/{accountId}/preflight/single-leg:
+    post:
+      tags:
+        - order-placement
+      summary: Calculates the estimated financial impact of a potential trade before execution
+      description: Performs preflight calculations for a single-leg order (a transaction involving a single security) to provide comprehensive cost estimates and account impact details. Returns estimated commission, regulatory fees, order value, buying power requirements, margin impact, and other trade-specific information to help users make informed trading decisions before order placement. Note that these are estimates only, and actual execution values may vary depending on market conditions. This endpoint may be called before submitting an actual order to understand the potential financial implications.
+      operationId: preflight-single-leg
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.preflight.PreflightSingleLegRequest'
+        required: true
+      responses:
+        '200':
+          description: Successfully calculated preflight estimates
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.preflight.PreflightSingleLegResponse'
+        '400':
+          description: Invalid request parameters or account validation failure
+  /userapigateway/trading/{accountId}/preflight/multi-leg:
+    post:
+      tags:
+        - order-placement
+      summary: Calculates the estimated financial impact of a complex multi-leg trade before execution
+      description: Performs preflight calculations for a multi-leg order (a transaction involving multiple securities or options strategies such as spreads, straddles, or combinations) to provide comprehensive cost estimates and account impact details. Returns estimated commission, regulatory fees, total order value, buying power requirements, margin impact, net credit/debit amounts, and strategy-specific information to help users make informed trading decisions before order placement. This endpoint handles complex options strategies and calculates the combined effect of all legs in the trade. Note that these are estimates only, and actual execution values may vary depending on market conditions and fill prices. This endpoint may be called before submitting an actual multi-leg order to understand the potential financial implications of the strategy.
+      operationId: preflight-multi-leg
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.preflight.PreflightMultiLegRequest'
+        required: true
+      responses:
+        '200':
+          description: Successfully calculated preflight estimates for a given multi-leg strategy
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.preflight.PreflightMultiLegResponse'
+        '400':
+          description: Invalid request parameters, unsupported strategy, or account validation failure
+  /userapigateway/trading/{accountId}/order:
+    post:
+      tags:
+        - order-placement
+      summary: Place a new order
+      description: |
+        Submits a new order asynchronously for the specified account.
+
+        Note: Order placement is asynchronous. The returned result confirms submission, not execution or visibility.
+        To retrieve the order status or execution details, query the GET /{orderId} endpoint after submission.
+      operationId: place-order
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.ApiOrderRequest'
+        required: true
+      responses:
+        '200':
+          description: Order accepted for processing.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.ApiOrderResult'
+        '400':
+          description: Order validation failed.
+    put:
+      tags:
+        - order-placement
+      summary: Cancel-Replace an existing order
+      description: |
+        Submits a request to replace an existing order asynchronously for the specified account. A replacement lets you modify an open order (for example, its quantity or price) without cancelling and resubmitting it manually.
+        Note: Order replacement is asynchronous. This response confirms submission only. To verify the order status or execution details, use the GET /{orderId} endpoint after replacement.
+        Supported for equity, option, and crypto quantity orders.
+      operationId: replace-order
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.ApiCancelReplaceOrderRequest'
+        required: true
+      responses:
+        '200':
+          description: Order replacement accepted for processing.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.ApiOrderResult'
+        '400':
+          description: Order validation failed.
+  /userapigateway/trading/{accountId}/order/multileg:
+    post:
+      tags:
+        - order-placement
+      summary: Place a new multi-leg order
+      description: |
+        Submits a new multi-leg order asynchronously for the specified account.
+
+        Note: Order placement is asynchronous. This response confirms submission only.
+        To verify the order status or execution details, use the GET /{orderId} endpoint after placement.
+      operationId: place-multileg-order
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.ApiMultilegOrderRequest'
+        required: true
+      responses:
+        '200':
+          description: Multi-leg order accepted for processing.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.ApiOrderResult'
+        '400':
+          description: Order validation failed.
+  /userapigateway/trading/{accountId}/order/{orderId}:
+    get:
+      tags:
+        - order-placement
+      summary: Retrieve order details
+      description: |
+        Fetches the status and details of a specific order for the given account.
+
+        Note: Order placement is asynchronous. This endpoint may return HTTP 404 if the order has not yet been indexed for retrieval.
+        In some cases, the order may already be active in the market but momentarily not yet visible through this API due to eventual consistency.
+      operationId: get-order
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order details retrieved successfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.order.GatewayOrder'
+        '404':
+          description: Order not found (may not be processed yet).
+    delete:
+      tags:
+        - order-placement
+      summary: Request order cancellation
+      description: |
+        Submits an asynchronous request to cancel the specified order.
+
+        Note: While most cancellations are processed immediately during market hours, this is not guaranteed.
+        Always use the GET /{orderId} endpoint to confirm whether the order has been cancelled.
+      operationId: cancel-order
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Cancellation request submitted successfully.
+  /userapigateway/option-details/{accountId}/greeks:
+    get:
+      tags:
+        - option-details
+      summary: Get option greeks
+      description: Returns the greeks for a list of option contracts specified in OSI (Options Symbology Initiative) normalized format. Maximum 250 contracts per request.
+      operationId: get-option-greeks
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: osiSymbols
+          in: query
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.hellopublic.userapigateway.api.rest.options.GreeksResponse'
+  /userapigateway/historicdata/{type}/{symbol}/{period}:
+    get:
+      tags:
+        - market-data
+      summary: Fetch bar data for a given symbol and period
+      operationId: get-bars-v2
+      parameters:
+        - name: symbol
+          in: path
+          description: The symbol to fetch bar data for
+          required: true
+          schema:
+            type: string
+        - name: period
+          in: path
+          description: The time period for the bar data
+          required: true
+          schema:
+            type: string
+            enum:
+              - DAY
+              - WEEK
+              - MONTH
+              - QUARTER
+              - HALF_YEAR
+              - YEAR
+              - FIVE_YEARS
+              - TEN_YEARS
+              - ALL
+              - YTD
+              - SINCE_PURCHASE
+        - name: purchaseDate
+          in: query
+          description: Required for SINCE_PURCHASE. YYYY-MM-DD
+          required: false
+          schema:
+            type: string
+            example: '2025-02-24'
+        - name: tradingSessionToggle
+          in: query
+          description: Which sessions to include on the DAY and WEEK equity charts. REGULAR_HOURS = 09:30-16:00 only; REGULAR_AND_EXTENDED_HOURS = 04:00-20:00 (default when omitted); ALL_SESSIONS = adds the overnight ATS sessions. On DAY, ALL_SESSIONS expands to a midnight-midnight axis and adds the separate preMarketOvernight (00:00-04:00) and postMarketOvernight (20:00-24:00) fields. On WEEK, ALL_SESSIONS switches the chart to full 24/5 coverage (extended hours + overnight ATS) merged chronologically into the single continuous regularMarket series (no separate overnight fields); default and REGULAR_HOURS keep the regular-hours-only WEEK chart unchanged. Unknown values fall back to REGULAR_AND_EXTENDED_HOURS.
+          required: false
+          schema:
+            type: string
+            enum:
+              - REGULAR_HOURS
+              - REGULAR_AND_EXTENDED_HOURS
+              - ALL_SESSIONS
+        - name: ipoDate
+          in: query
+          description: Optional. The asset's IPO / first-trade date (YYYY-MM-DD). When the asset is younger than the requested period, the backend fetches a finer aggregation over the available post-IPO history (so the chart isn't a straight diagonal) and returns a `leadingFill` object describing the flat lead-in for the pre-IPO portion. When omitted, behavior is unchanged. A future or unparseable value is ignored. Not applied to the DAY chart. See the `leadingFill` schema.
+          required: false
+          schema:
+            type: string
+            example: '2026-07-20'
+        - name: type
+          in: path
+          description: Instrument type. Used as a suffix on the symbol internally (EQUITY = no suffix).
+          required: true
+          schema:
+            type: string
+            enum:
+              - EQUITY
+              - CRYPTO
+              - OPTION
+              - INDEX
+      responses:
+        '200':
+          description: Successful response with bar data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BarsResponse'
+  /userapigateway/historicdata/{type}/{symbol}/{period}/{aggregation}:
+    get:
+      tags:
+        - market-data
+      summary: Fetch bar data for a given symbol and period
+      operationId: get-bars-v2-with-aggregation
+      parameters:
+        - name: symbol
+          in: path
+          description: The symbol to fetch bar data for
+          required: true
+          schema:
+            type: string
+        - name: period
+          in: path
+          description: The time period for the bar data
+          required: true
+          schema:
+            type: string
+            enum:
+              - DAY
+              - WEEK
+              - MONTH
+              - QUARTER
+              - HALF_YEAR
+              - YEAR
+              - FIVE_YEARS
+              - TEN_YEARS
+              - ALL
+              - YTD
+              - SINCE_PURCHASE
+        - name: purchaseDate
+          in: query
+          description: Required for SINCE_PURCHASE. YYYY-MM-DD
+          required: false
+          schema:
+            type: string
+            example: '2025-02-24'
+        - name: tradingSessionToggle
+          in: query
+          description: Which sessions to include on the DAY and WEEK equity charts. REGULAR_HOURS = 09:30-16:00 only; REGULAR_AND_EXTENDED_HOURS = 04:00-20:00 (default when omitted); ALL_SESSIONS = adds the overnight ATS sessions. On DAY, ALL_SESSIONS expands to a midnight-midnight axis and adds the separate preMarketOvernight (00:00-04:00) and postMarketOvernight (20:00-24:00) fields. On WEEK, ALL_SESSIONS switches the chart to full 24/5 coverage (extended hours + overnight ATS) merged chronologically into the single continuous regularMarket series (no separate overnight fields); default and REGULAR_HOURS keep the regular-hours-only WEEK chart unchanged. Unknown values fall back to REGULAR_AND_EXTENDED_HOURS.
+          required: false
+          schema:
+            type: string
+            enum:
+              - REGULAR_HOURS
+              - REGULAR_AND_EXTENDED_HOURS
+              - ALL_SESSIONS
+        - name: ipoDate
+          in: query
+          description: Optional. The asset's IPO / first-trade date (YYYY-MM-DD). When the asset is younger than the requested period, the backend fetches a finer aggregation over the available post-IPO history (so the chart isn't a straight diagonal) and returns a `leadingFill` object describing the flat lead-in for the pre-IPO portion. When omitted, behavior is unchanged. A future or unparseable value is ignored. Not applied to the DAY chart. See the `leadingFill` schema.
+          required: false
+          schema:
+            type: string
+            example: '2026-07-20'
+        - name: type
+          in: path
+          description: Instrument type. Used as a suffix on the symbol internally (EQUITY = no suffix).
+          required: true
+          schema:
+            type: string
+            enum:
+              - EQUITY
+              - CRYPTO
+              - OPTION
+              - INDEX
+        - name: aggregation
+          in: path
+          description: Aggregation override for the bar data.
+          required: true
+          schema:
+            type: string
+            enum:
+              - ONE_MINUTE
+              - FIVE_MINUTES
+              - TEN_MINUTES
+              - FIFTEEN_MINUTES
+              - THIRTY_MINUTES
+              - ONE_HOUR
+              - ONE_DAY
+              - ONE_WEEK
+              - ONE_MONTH
+              - THREE_MONTHS
+              - SIX_MONTHS
+              - ONE_YEAR
+      responses:
+        '200':
+          description: Successful response with bar data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BarsResponse'
+  /userapigateway/option-details/{accountId}/strategy-details/quote:
+    post:
+      tags:
+        - option-details
+      summary: Get quote for multi-leg option strategy
+      description: Get a quote for a multi-leg option strategy including all legs and combined pricing
+      operationId: get-strategy-quote
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/com.matadorapp.shared.customerordergateway.dto.StrategyQuoteRequest'
+        required: true
+      responses:
+        '200':
+          description: Success
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/com.matadorapp.shared.customerordergateway.dto.StrategyQuoteDto'
+security:
+  - bearerAuth: []
+servers:
+  - url: https://api.public.com
+    description: Production server
